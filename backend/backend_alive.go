@@ -5,7 +5,7 @@ import (
 	"net"
 	"net/url"
 
-	"github.com/leonardo5621/golang-load-balancer/utils"
+	"github.com/IRSHIT033/Atlas/utils"
 	"go.uber.org/zap"
 )
 

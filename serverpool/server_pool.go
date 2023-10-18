@@ -1,12 +1,17 @@
 package serverpool
 
 import (
+	"context"
+	"fmt"
 	"sync"
+	"time"
 
 	"github.com/IRSHIT033/Atlas/backend"
+	"github.com/IRSHIT033/Atlas/utils"
+	"go.uber.org/zap"
 )
 
-type ServerPool interface{
+type ServerPool interface {
 	GetBackends() []backend.Backend
 	GetNextValidPeer() backend.Backend
 	AddBackend(backend.Backend)
@@ -36,7 +41,6 @@ func (s *roundRobinServerPool) GetNextValidPeer() backend.Backend {
 	return nil
 }
 
-
 func (s *roundRobinServerPool) GetBackends() []backend.Backend {
 	return s.backends
 }
@@ -49,3 +53,56 @@ func (s *roundRobinServerPool) GetServerPoolSize() int {
 	return len(s.backends)
 }
 
+func HealthCheck(ctx context.Context, s ServerPool) {
+	aliveChannel := make(chan bool, 1)
+
+	for _, b := range s.GetBackends() {
+		b := b
+		requestCtx, stop := context.WithTimeout(ctx, 10*time.Second)
+		defer stop()
+		status := "up"
+		go backend.IsBackendAlive(requestCtx, aliveChannel, b.GetURL())
+
+		select {
+		case <-ctx.Done():
+			utils.Logger.Info("Gracefully shutting down health check")
+			return
+		case alive := <-aliveChannel:
+			b.SetAlive(alive)
+			if !alive {
+				status = "down"
+			}
+		}
+		utils.Logger.Debug(
+			"URL Status",
+			zap.String("URL", b.GetURL().String()),
+			zap.String("status", status),
+		)
+	}
+}
+
+func NewServerPool(strategy utils.LoadBalanceStrategy) (ServerPool, error) {
+	switch strategy {
+	case utils.RoundRobin:
+		return &roundRobinServerPool{
+			backends: make([]backend.Backend, 0),
+			current:  0,
+		}, nil
+	default:
+		return nil, fmt.Errorf("invalid strategy")
+	}
+}
+
+func LaunchHealthCheck(ctx context.Context, sp ServerPool) {
+	t := time.NewTicker(time.Second * 20)
+	utils.Logger.Info("Starting health check...")
+	for {
+		select {
+		case <-t.C:
+			go HealthCheck(ctx, sp)
+		case <-ctx.Done():
+			utils.Logger.Info("Closing Health Check")
+			return
+		}
+	}
+}

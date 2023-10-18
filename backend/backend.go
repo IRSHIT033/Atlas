@@ -12,22 +12,22 @@ type Backend interface {
 	IsAlive() bool
 	GetURL() *url.URL
 	GetActiveConnections() int
-	Serve(http.ResponseWriter,*http.Request)
+	Serve(http.ResponseWriter, *http.Request)
 }
 
 type backend struct {
-	url *url.URL
-	alive bool
-	mux sync.RWMutex
-	connections int
+	url          *url.URL
+	alive        bool
+	mux          sync.RWMutex
+	connections  int
 	reverseProxy *httputil.ReverseProxy
 }
 
 func (b *backend) GetActiveConnections() int {
 	b.mux.RLock()
-	connections:=b.connections
+	connections := b.connections
 	b.mux.RUnlock()
-	return connections;
+	return connections
 }
 
 func (b *backend) SetAlive(alive bool) {
@@ -67,4 +67,3 @@ func NewBackend(u *url.URL, rp *httputil.ReverseProxy) Backend {
 		reverseProxy: rp,
 	}
 }
-
