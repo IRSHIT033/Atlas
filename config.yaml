@@ -1,0 +1,8 @@
+## Load Balancer Port
+loadbalance_port: 3333
+## Retry limit of a backend server
+max_attempt_limit: 1
+## Backend servers host
+backends:
+  - "http://localhost:4001"
+  - "http://localhost:4002"

@@ -88,6 +88,11 @@ func NewServerPool(strategy utils.LoadBalanceStrategy) (ServerPool, error) {
 			backends: make([]backend.Backend, 0),
 			current:  0,
 		}, nil
+
+	case utils.LeastConnected:
+		return &leastConnServerPool{
+			backends: make([]backend.Backend, 0),
+		}, nil
 	default:
 		return nil, fmt.Errorf("invalid strategy")
 	}
