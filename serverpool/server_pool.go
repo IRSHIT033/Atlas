@@ -19,19 +19,66 @@ type ServerPool interface {
 }
 
 type roundRobinServerPool struct {
-	backends []backend.Backend
-	mux      sync.RWMutex
-	current  int
+	backends  []backend.Backend
+	mux       sync.RWMutex
+	current   int
+	maxWeight int
+	gcd       int
+}
+
+// For weighted round robin
+
+func findGCD(a, b int) int {
+	if b == 0 {
+		return a
+	}
+	return findGCD(b, a%b)
+}
+
+func calculateGCDofWeights(backends []backend.Backend) int {
+	gcd := backends[0].GetWeight()
+	for _, b := range backends {
+		gcd = findGCD(gcd, b.GetWeight())
+	}
+	return gcd
+}
+
+func getMaxWeight(backends []backend.Backend) int {
+	maxWeight := backends[0].GetWeight()
+	for _, b := range backends {
+		if b.GetWeight() > maxWeight {
+			maxWeight = b.GetWeight()
+		}
+	}
+	return maxWeight
 }
 
 func (s *roundRobinServerPool) Rotate() backend.Backend {
 	s.mux.Lock()
-	s.current = (s.current + 1) % s.GetServerPoolSize()
+	if s.maxWeight == 0 { // for round robin
+		s.current = (s.current + 1) % s.GetServerPoolSize()
+	} else { // for weighted round robin
+		for {
+			s.current = (s.current + 1) % s.GetServerPoolSize()
+			if s.current == 0 {
+				s.maxWeight = s.maxWeight - s.gcd
+				if s.maxWeight <= 0 {
+					s.maxWeight = getMaxWeight(s.backends)
+				}
+			}
+			if s.backends[s.current].GetWeight() >= s.maxWeight {
+				break
+			}
+		}
+	}
 	s.mux.Unlock()
 	return s.backends[s.current]
 }
 
 func (s *roundRobinServerPool) GetNextValidPeer() backend.Backend {
+	s.maxWeight = getMaxWeight(s.backends)
+	s.gcd = calculateGCDofWeights(s.backends)
+
 	for i := 0; i < s.GetServerPoolSize(); i++ {
 		nextPeer := s.Rotate()
 		if nextPeer.IsAlive() {
@@ -87,6 +134,7 @@ func NewServerPool(strategy utils.LoadBalanceStrategy) (ServerPool, error) {
 		return &roundRobinServerPool{
 			backends: make([]backend.Backend, 0),
 			current:  0,
+			gcd:      0,
 		}, nil
 
 	case utils.LeastConnected:

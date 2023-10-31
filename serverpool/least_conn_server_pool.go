@@ -1,6 +1,7 @@
 package serverpool
 
 import (
+	"math"
 	"sync"
 
 	"github.com/IRSHIT033/Atlas/backend"
@@ -12,22 +13,22 @@ type leastConnServerPool struct {
 }
 
 func (s *leastConnServerPool) GetNextValidPeer() backend.Backend {
+	
 	var leastConnectedPeer backend.Backend
+    
+	s.mux.Lock()
+	defer s.mux.Unlock()
 
-	// first
-	for _, b := range s.backends {
-		if b.IsAlive() {
-			leastConnectedPeer = b
-			break
-		}
-	}
+	minConnCount:= math.MaxInt64
 
 	for _, b := range s.backends {
 		if !b.IsAlive() {
 			continue
 		}
-		if leastConnectedPeer.GetActiveConnections() > b.GetActiveConnections() {
+		effectiveConnCount := b.GetActiveConnections() / b.GetWeight()
+		if  effectiveConnCount < minConnCount {
 			leastConnectedPeer = b
+			minConnCount = effectiveConnCount
 		}
 	}
 

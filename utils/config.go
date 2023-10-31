@@ -7,7 +7,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-
 type LoadBalanceStrategy int
 
 const (
@@ -15,7 +14,7 @@ const (
 	LeastConnected
 )
 
-func GetLoadBalanceStrategy(strategy string)LoadBalanceStrategy{
+func GetLoadBalanceStrategy(strategy string) LoadBalanceStrategy {
 	switch strategy {
 	case "least-connection":
 		return LeastConnected
@@ -25,19 +24,23 @@ func GetLoadBalanceStrategy(strategy string)LoadBalanceStrategy{
 
 }
 
+type Backend struct {
+	Url    string `yaml:"url"`
+	Weight int    `yaml:"weight"`
+}
+
 type Config struct {
-	Port            int      `yaml:"loadbalance_port"`
-	MaxAttemptLimit int      `yaml:"max_attempt_limit"`
-	Backends        []string `yaml:"backends"`
-	Strategy        string   `yaml:"strategy"`
+	Port            int       `yaml:"loadbalance_port"`
+	MaxAttemptLimit int       `yaml:"max_attempt_limit"`
+	Backends        []Backend `yaml:"backends"`
+	Strategy        string    `yaml:"strategy"`
 }
 
 const MAX_LB_ATTEMPTS int = 3
 
-
 func GetLBConfig() (*Config, error) {
 	var config Config
-	configFile, err :=  os.ReadFile("config.yaml")
+	configFile, err := os.ReadFile("config.yaml")
 	if err != nil {
 		return nil, err
 	}

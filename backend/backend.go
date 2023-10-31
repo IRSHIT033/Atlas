@@ -11,6 +11,7 @@ type Backend interface {
 	SetAlive(bool)
 	IsAlive() bool
 	GetURL() *url.URL
+	GetWeight() int
 	GetActiveConnections() int
 	Serve(http.ResponseWriter, *http.Request)
 }
@@ -20,6 +21,9 @@ type backend struct {
 	alive        bool
 	mux          sync.RWMutex
 	connections  int
+	weight       int
+	gcd          int
+	maxWeight    int
 	reverseProxy *httputil.ReverseProxy
 }
 
@@ -41,6 +45,10 @@ func (b *backend) IsAlive() bool {
 	alive := b.alive
 	defer b.mux.RUnlock()
 	return alive
+}
+
+func (b *backend) GetWeight() int {
+	return b.weight
 }
 
 func (b *backend) GetURL() *url.URL {

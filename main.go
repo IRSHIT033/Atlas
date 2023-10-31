@@ -39,9 +39,9 @@ func main() {
 	loadBalancer := frontend.NewLoadBalancer(serverPool)
 
 	for _, u := range config.Backends {
-		endpoint, err := url.Parse(u)
+		endpoint, err := url.Parse(u.Url)
 		if err != nil {
-			logger.Fatal(err.Error(), zap.String("URL", u))
+			logger.Fatal(err.Error(), zap.String("URL", u.Url))
 
 		}
 		reverseProxy := httputil.NewSingleHostReverseProxy(endpoint)
