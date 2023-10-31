@@ -55,35 +55,31 @@ func getMaxWeight(backends []backend.Backend) int {
 
 func (s *roundRobinServerPool) Rotate() backend.Backend {
 	s.mux.Lock()
-	if s.maxWeight == 0 { // for round robin
+	for {
 		s.current = (s.current + 1) % s.GetServerPoolSize()
-	} else { // for weighted round robin
-		for {
-			s.current = (s.current + 1) % s.GetServerPoolSize()
-			if s.current == 0 {
-				s.maxWeight = s.maxWeight - s.gcd
-				if s.maxWeight <= 0 {
-					s.maxWeight = getMaxWeight(s.backends)
-				}
-			}
-			if s.backends[s.current].GetWeight() >= s.maxWeight {
-				break
+		if s.maxWeight == 0 {
+			break
+		}
+		if s.current == 0 {
+			s.maxWeight = s.maxWeight - s.gcd
+
+			if s.maxWeight <= 0 {
+				s.maxWeight = getMaxWeight(s.backends)
 			}
 		}
+		if s.backends[s.current].GetWeight() >= s.maxWeight {
+			break
+		}
 	}
+
 	s.mux.Unlock()
 	return s.backends[s.current]
 }
 
 func (s *roundRobinServerPool) GetNextValidPeer() backend.Backend {
-	s.maxWeight = getMaxWeight(s.backends)
-	s.gcd = calculateGCDofWeights(s.backends)
-
-	for i := 0; i < s.GetServerPoolSize(); i++ {
-		nextPeer := s.Rotate()
-		if nextPeer.IsAlive() {
-			return nextPeer
-		}
+	nextPeer := s.Rotate()
+	if nextPeer.IsAlive() {
+		return nextPeer
 	}
 	return nil
 }
@@ -94,6 +90,8 @@ func (s *roundRobinServerPool) GetBackends() []backend.Backend {
 
 func (s *roundRobinServerPool) AddBackend(b backend.Backend) {
 	s.backends = append(s.backends, b)
+	s.maxWeight = getMaxWeight(s.backends)
+	s.gcd = calculateGCDofWeights(s.backends)
 }
 
 func (s *roundRobinServerPool) GetServerPoolSize() int {

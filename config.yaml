@@ -1,8 +1,19 @@
+###-----------config.yaml-------------------###
+
 ## Load Balancer Port
 loadbalance_port: 3333
 ## Retry limit of a backend server
 max_attempt_limit: 1
 ## Backend servers host
 backends:
-  - "http://localhost:4001"
-  - "http://localhost:4002"
+  - url: "http://localhost:4001"
+    weight: 1
+  - url: "http://localhost:4002"
+    weight: 2
+# put url and the respective weights your servers
+
+## Strategy
+strategy: "round-robin"
+## u can put any one of the two strategies below
+# least-connection or
+# round-robin

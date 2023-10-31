@@ -45,7 +45,7 @@ func main() {
 
 		}
 		reverseProxy := httputil.NewSingleHostReverseProxy(endpoint)
-		backendServer := backend.NewBackend(endpoint, reverseProxy)
+		backendServer := backend.NewBackend(endpoint, u.Weight, reverseProxy)
 		reverseProxy.ErrorHandler = func(writer http.ResponseWriter, request *http.Request, e error) {
 			logger.Error("error handling the request",
 				zap.String("host", endpoint.Host),

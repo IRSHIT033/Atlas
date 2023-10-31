@@ -22,8 +22,6 @@ type backend struct {
 	mux          sync.RWMutex
 	connections  int
 	weight       int
-	gcd          int
-	maxWeight    int
 	reverseProxy *httputil.ReverseProxy
 }
 
@@ -68,9 +66,10 @@ func (b *backend) Serve(rw http.ResponseWriter, req *http.Request) {
 	b.reverseProxy.ServeHTTP(rw, req)
 }
 
-func NewBackend(u *url.URL, rp *httputil.ReverseProxy) Backend {
+func NewBackend(u *url.URL, w int, rp *httputil.ReverseProxy) Backend {
 	return &backend{
 		url:          u,
+		weight:       w,
 		alive:        true,
 		reverseProxy: rp,
 	}
